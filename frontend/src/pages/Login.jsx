@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/api';
+import { setSessionTokens } from '../utils/session';
 import { Lock, Mail, Loader2 } from 'lucide-react';
 
 const Login = () => {
@@ -17,8 +18,10 @@ const Login = () => {
 
     try {
       const response = await authService.login({ email, password });
-      localStorage.setItem('token', response.data.accessToken);
-      localStorage.setItem('refreshToken', response.data.refreshToken);
+      setSessionTokens({
+        accessToken: response.data.accessToken,
+        refreshToken: response.data.refreshToken
+      });
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password');

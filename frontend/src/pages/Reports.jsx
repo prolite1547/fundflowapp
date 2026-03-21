@@ -114,19 +114,19 @@ const Reports = () => {
             const p = period === 'monthly' ? 'Monthly' : period === 'yearly' ? 'Annual' : "This Week's";
             return (
               <div className="summary-cards metric-grid">
-                <div className="glass card">
+                <div className="glass card metric-card">
                   <span className="metric-label">{p} Income</span>
                   <span className="metric-value text-success">₱{data?.totalIncome?.toLocaleString()}</span>
                 </div>
-                <div className="glass card">
+                <div className="glass card metric-card">
                   <span className="metric-label">{p} Expenses</span>
                   <span className="metric-value text-danger">₱{data?.totalExpense?.toLocaleString()}</span>
                 </div>
-                <div className="glass card">
+                <div className="glass card metric-card">
                   <span className="metric-label">{p} Investments</span>
                   <span className="metric-value text-investment">₱{data?.totalInvestment?.toLocaleString()}</span>
                 </div>
-                <div className="glass card">
+                <div className="glass card metric-card">
                   <span className="metric-label">{p} Net Savings</span>
                   <span className="metric-value text-primary">₱{data?.netSavings?.toLocaleString()}</span>
                 </div>
