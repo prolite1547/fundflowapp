@@ -1,0 +1,10 @@
+.DS_Store
+
+# Repository-level logs
+*.log
+
+# Local environment and editor noise
+.env
+.env.*
+.idea/
+.vscode/

@@ -1,0 +1,83 @@
+### Register 
+POST http://localhost:8080/api/auth/register 
+Content-Type: application/json
+
+{
+    "fullName": "John Doe",
+    "email": "johndoe123@gmail.com",
+    "password": "StrongP@ssword1"
+}
+
+### Login
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "johndoe123@gmail.com",
+    "password": "StrongP@ssword1"
+}
+
+### Create Account
+POST http://localhost:8080/api/accounts
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5ZDI5NmQzZS1iNTBkLTQ0ODItOWUyMS0zZGI3MTg5N2FmMzYiLCJlbWFpbCI6ImpvaG5kb2UxMjNAZ21haWwuY29tIiwiaWF0IjoxNzcxNzUwMzQyLCJleHAiOjE3NzE3NTEyNDJ9.439XZIdnf85eVkXc61iRYUy8o2m3HPLOPeT14szoDUQ
+
+{
+    "name": "UNIONBANK",
+    "type": "BANK",
+    "initialBalance": 70000.0
+}
+
+### Get My Accounts
+GET http://localhost:8080/api/accounts
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5ZDI5NmQzZS1iNTBkLTQ0ODItOWUyMS0zZGI3MTg5N2FmMzYiLCJlbWFpbCI6ImpvaG5kb2UxMjNAZ21haWwuY29tIiwiaWF0IjoxNzcxNzUwMzQyLCJleHAiOjE3NzE3NTEyNDJ9.439XZIdnf85eVkXc61iRYUy8o2m3HPLOPeT14szoDUQ
+
+### Create Category
+POST http://localhost:8080/api/categories
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5ZDI5NmQzZS1iNTBkLTQ0ODItOWUyMS0zZGI3MTg5N2FmMzYiLCJlbWFpbCI6ImpvaG5kb2UxMjNAZ21haWwuY29tIiwiaWF0IjoxNzcxNzM5MzI0LCJleHAiOjE3NzE3NDAyMjR9.qMW-KrKl81WzajLDSs8BNULwC0rhB8oprTin2H-gYF8
+
+{
+    "name": "Food",
+    "type": "EXPENSE",
+    "icon": "🍛",
+    "color": ""
+}
+
+### Get My Categories
+GET http://localhost:8080/api/categories
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5ZDI5NmQzZS1iNTBkLTQ0ODItOWUyMS0zZGI3MTg5N2FmMzYiLCJlbWFpbCI6ImpvaG5kb2UxMjNAZ21haWwuY29tIiwiaWF0IjoxNzcxNzUwMzQyLCJleHAiOjE3NzE3NTEyNDJ9.439XZIdnf85eVkXc61iRYUy8o2m3HPLOPeT14szoDUQ
+
+
+### Create transactions
+POST http://localhost:8080/api/transactions
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5ZDI5NmQzZS1iNTBkLTQ0ODItOWUyMS0zZGI3MTg5N2FmMzYiLCJlbWFpbCI6ImpvaG5kb2UxMjNAZ21haWwuY29tIiwiaWF0IjoxNzcxNzUwMzQyLCJleHAiOjE3NzE3NTEyNDJ9.439XZIdnf85eVkXc61iRYUy8o2m3HPLOPeT14szoDUQ
+
+{
+    "accountId": "cca2c9ec-eb0d-427a-bd48-4665f98392bb",
+    "categoryId": "a44f09e6-d252-4ef1-962f-38548de0683a",
+    "description": "Bumili ng bigas at karne",
+    "amount": 2500.0,
+    "date": "2026-02-23",
+    "type": "EXPENSE"
+}
+
+### Create transfer transaction
+POST http://localhost:8080/api/transactions
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5ZDI5NmQzZS1iNTBkLTQ0ODItOWUyMS0zZGI3MTg5N2FmMzYiLCJlbWFpbCI6ImpvaG5kb2UxMjNAZ21haWwuY29tIiwiaWF0IjoxNzcxNzUwMzQyLCJleHAiOjE3NzE3NTEyNDJ9.439XZIdnf85eVkXc61iRYUy8o2m3HPLOPeT14szoDUQ
+
+{
+    "accountId": "cca2c9ec-eb0d-427a-bd48-4665f98392bb",
+    "destinationAccountId": "d0e54528-7180-4051-aef6-ed372214296f",
+    "description": "Lipat galing UNIONBANK to GCASH",
+    "categoryId": "a44f09e6-d252-4ef1-962f-38548de0683a",
+    "amount": 5000.0,
+    "date": "2026-02-23",
+    "type": "TRANSFER"
+}
+
+### GET My Transactions
+GET http://localhost:8080/api/transactions
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI5ZDI5NmQzZS1iNTBkLTQ0ODItOWUyMS0zZGI3MTg5N2FmMzYiLCJlbWFpbCI6ImpvaG5kb2UxMjNAZ21haWwuY29tIiwiaWF0IjoxNzcxNzUwMzQyLCJleHAiOjE3NzE3NTEyNDJ9.439XZIdnf85eVkXc61iRYUy8o2m3HPLOPeT14szoDUQ

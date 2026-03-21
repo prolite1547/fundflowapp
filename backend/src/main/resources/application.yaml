@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: fundflowapp
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fundflowapp
+    username: iamic.dev
+    password: admin.mike
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+jwt:
+  secret: 6a142d125ebf46308ef094d01f5453a05ef73e1de30255f65ac9362bb789f5de
+  expiration: 900        # 15 min
+  refresh-expiration: 604800   # 7 days

@@ -1,0 +1,79 @@
+plugins {
+	id 'java'
+	id 'groovy'
+	id 'org.springframework.boot' version '4.0.3'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.iamicdev'
+version = '0.0.1-SNAPSHOT'
+description = 'Demo project for Spring Boot'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    implementation 'org.postgresql:postgresql:42.7.1'
+
+    // JWT
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Spock Framework (Groovy-based testing)
+    testImplementation 'org.spockframework:spock-core:2.4-groovy-4.0'
+    testImplementation 'org.spockframework:spock-spring:2.4-groovy-4.0'
+    testImplementation 'org.apache.groovy:groovy:4.0.24'
+
+    // H2 in-memory database for unit/integration tests
+    testImplementation 'com.h2database:h2'
+
+    // Mockito (used with Spock for Java mocks)
+    testImplementation 'org.mockito:mockito-core:5.11.0'
+
+}
+
+sourceSets {
+    test {
+        groovy {
+            srcDirs = ['src/test/groovy']
+        }
+        java {
+            srcDirs = ['src/test/java']
+        }
+    }
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+	testLogging {
+		showStandardStreams = true
+		exceptionFormat = 'full'
+	}
+}
