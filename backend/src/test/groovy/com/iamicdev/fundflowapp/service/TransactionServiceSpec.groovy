@@ -1,14 +1,25 @@
 package com.iamicdev.fundflowapp.service
 
 import com.iamicdev.fundflowapp.dto.request.CreateTransactionRequest
-import com.iamicdev.fundflowapp.model.*
-import com.iamicdev.fundflowapp.repository.*
-import com.iamicdev.fundflowapp.strategy.*
-import com.iamicdev.fundflowapp.strategy.base.*
+import com.iamicdev.fundflowapp.model.Account
+import com.iamicdev.fundflowapp.model.Category
+import com.iamicdev.fundflowapp.model.Transaction
+import com.iamicdev.fundflowapp.model.TransactionType
+import com.iamicdev.fundflowapp.model.User
+import com.iamicdev.fundflowapp.repository.AccountRepository
+import com.iamicdev.fundflowapp.repository.CategoryRepository
+import com.iamicdev.fundflowapp.repository.TransactionRepository
+import com.iamicdev.fundflowapp.strategy.ExpenseStrategy
+import com.iamicdev.fundflowapp.strategy.IncomeStrategy
+import com.iamicdev.fundflowapp.strategy.InvestmentStrategy
+import com.iamicdev.fundflowapp.strategy.TransferStrategy
+import com.iamicdev.fundflowapp.strategy.base.TransactionStrategy
+import groovy.transform.CompileDynamic
 import spock.lang.Specification
 
 import java.time.Instant
 
+@CompileDynamic
 class TransactionServiceSpec extends Specification {
 
     TransactionRepository transactionRepository = Mock(TransactionRepository)

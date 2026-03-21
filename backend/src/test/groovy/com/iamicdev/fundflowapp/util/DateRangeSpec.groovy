@@ -1,5 +1,6 @@
 package com.iamicdev.fundflowapp.util
 
+import groovy.transform.CompileDynamic
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -7,6 +8,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
 
+@CompileDynamic
 class DateRangeSpec extends Specification {
 
     ZoneId utc = ZoneId.of("UTC")

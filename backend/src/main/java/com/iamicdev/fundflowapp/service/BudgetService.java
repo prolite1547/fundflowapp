@@ -3,7 +3,6 @@ package com.iamicdev.fundflowapp.service;
 import java.util.UUID;
 import java.util.List;
 import java.time.LocalDate;
-import java.time.Month;
 import java.time.ZoneId;
 
 import lombok.RequiredArgsConstructor;
@@ -85,7 +84,9 @@ public class BudgetService {
     private double calculateSpent(Budget budget){
         List<Transaction> trxList = transactionService.findByUserId(budget.getUserId());
 
-        if (trxList == null) return 0.0;
+        if (trxList == null) {
+            return 0.0;
+        }
 
         return trxList.stream()
                 .filter(t -> t.getCategoryId().equals(budget.getCategoryId()))

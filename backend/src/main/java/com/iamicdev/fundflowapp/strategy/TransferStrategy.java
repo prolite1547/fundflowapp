@@ -14,8 +14,12 @@ public class TransferStrategy implements TransactionStrategy {
         Account destinationAccount = context.getDestinationAccount();
         double amount = context.getAmount();
 
-        if(destinationAccount == null) throw new IllegalStateException("Destination account required for TRANSFER");
-        if(sourceAccount == null) throw new IllegalStateException("Source account required for TRANSFER");
+        if (destinationAccount == null) {
+            throw new IllegalStateException("Destination account required for TRANSFER");
+        }
+        if (sourceAccount == null) {
+            throw new IllegalStateException("Source account required for TRANSFER");
+        }
 
         sourceAccount.setBalance(sourceAccount.getBalance() - amount);
         destinationAccount.setBalance(destinationAccount.getBalance() + amount);

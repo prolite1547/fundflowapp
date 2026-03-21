@@ -1,6 +1,9 @@
 plugins {
 	id 'java'
 	id 'groovy'
+	id 'codenarc'
+	id 'checkstyle'
+	id 'jacoco'
 	id 'org.springframework.boot' version '4.0.3'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -23,6 +26,24 @@ configurations {
 
 repositories {
 	mavenCentral()
+}
+
+codenarc {
+    toolVersion = '3.6.0'
+    configFile = file('config/codenarc/codenarc.groovy')
+    maxPriority1Violations = 0
+    maxPriority2Violations = 0
+    maxPriority3Violations = 0
+}
+
+checkstyle {
+    toolVersion = '10.18.2'
+    configFile = file('config/checkstyle/checkstyle.xml')
+    maxWarnings = 0
+}
+
+jacoco {
+    toolVersion = '0.8.12'
 }
 
 dependencies {
@@ -59,6 +80,21 @@ dependencies {
 
 }
 
+tasks.withType(CodeNarc).configureEach {
+    reports {
+        html.required = true
+        xml.required = false
+        text.required = false
+    }
+}
+
+tasks.withType(Checkstyle).configureEach {
+    reports {
+        xml.required = false
+        html.required = true
+    }
+}
+
 sourceSets {
     test {
         groovy {
@@ -76,4 +112,31 @@ tasks.named('test') {
 		showStandardStreams = true
 		exceptionFormat = 'full'
 	}
+    finalizedBy tasks.named('jacocoTestReport')
+}
+
+tasks.named('jacocoTestReport') {
+    dependsOn tasks.named('test')
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('jacocoTestCoverageVerification')
+}
+
+tasks.named('jacocoTestCoverageVerification') {
+    dependsOn tasks.named('test')
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.70
+            }
+        }
+    }
 }

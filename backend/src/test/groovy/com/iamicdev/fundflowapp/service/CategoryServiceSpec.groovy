@@ -5,9 +5,11 @@ import com.iamicdev.fundflowapp.model.Category
 import com.iamicdev.fundflowapp.model.CategoryType
 import com.iamicdev.fundflowapp.model.User
 import com.iamicdev.fundflowapp.repository.CategoryRepository
+import groovy.transform.CompileDynamic
 import spock.lang.Specification
 import spock.lang.Unroll
 
+@CompileDynamic
 class CategoryServiceSpec extends Specification {
 
     CategoryRepository categoryRepository = Mock()

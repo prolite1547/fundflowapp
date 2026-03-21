@@ -2,7 +2,6 @@ package com.iamicdev.fundflowapp.strategy;
 
 import org.springframework.stereotype.Service;
 
-import com.iamicdev.fundflowapp.model.Account;
 import com.iamicdev.fundflowapp.strategy.base.TransactionContext;
 import com.iamicdev.fundflowapp.strategy.base.TransactionStrategy;
 

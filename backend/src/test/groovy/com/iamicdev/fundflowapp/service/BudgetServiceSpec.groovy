@@ -7,11 +7,12 @@ import com.iamicdev.fundflowapp.model.TransactionType
 import com.iamicdev.fundflowapp.model.User
 import com.iamicdev.fundflowapp.repository.BudgetRepository
 import com.iamicdev.fundflowapp.repository.CategoryRepository
+import groovy.transform.CompileDynamic
 import spock.lang.Specification
 
 import java.time.Instant
-import java.time.ZoneOffset
 
+@CompileDynamic
 class BudgetServiceSpec extends Specification {
 
     BudgetRepository budgetRepository = Mock()
