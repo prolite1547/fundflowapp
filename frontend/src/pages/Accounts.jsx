@@ -28,7 +28,7 @@ const Accounts = () => {
       setShowModal(false);
       dispatch(fetchAccounts());
       setFormData({ name: '', type: 'CASH', initialBalance: 0.00 });
-    } catch (err) {
+    } catch {
       alert('Error creating account');
     }
   };

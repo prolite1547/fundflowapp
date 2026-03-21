@@ -119,7 +119,7 @@ const Transactions = () => {
       setShowModal(false);
       fetchData();
       resetForm();
-    } catch (err) {
+    } catch {
       alert("Error creating transaction");
     }
   };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { categoryService } from '../services/api';
 import { Plus, Tag } from 'lucide-react';
 
@@ -8,11 +8,7 @@ const Categories = () => {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', type: 'EXPENSE' });
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const res = await categoryService.getCategories();
       setCategories(res.data);
@@ -21,7 +17,11 @@ const Categories = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,7 +30,7 @@ const Categories = () => {
       setShowModal(false);
       fetchCategories();
       setFormData({ name: '', type: 'EXPENSE' });
-    } catch (err) {
+    } catch {
       alert('Error creating category');
     }
   };
