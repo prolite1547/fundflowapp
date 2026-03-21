@@ -1,37 +1,46 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { transactionService, categoryService, accountService } from '../services/api';
-import { Plus, Search, Filter, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { transactionService, categoryService } from "../services/api";
+import {
+  fetchAccounts,
+  applyTransactionBalance,
+} from "../store/slices/accountsSlice";
+import { Plus, Search, Filter, X } from "lucide-react";
 
-const TYPE_OPTIONS = ['ALL', 'EXPENSE', 'INCOME', 'INVESTMENT', 'TRANSFER'];
+const TYPE_OPTIONS = ["ALL", "EXPENSE", "INCOME", "INVESTMENT", "TRANSFER"];
 
 const Transactions = () => {
+  const dispatch = useDispatch();
+  const { items: accounts, loading: accountsLoading } = useSelector(
+    (state) => state.accounts,
+  );
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState('ALL');
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState("ALL");
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
   const [showFilter, setShowFilter] = useState(false);
   const filterRef = useRef(null);
-  
+
   const [formData, setFormData] = useState({
-    amount: '',
-    description: '',
-    categoryId: '',
-    accountId: '',
-    destinationAccountId: '',
-    type: 'EXPENSE',
-    date: new Date().toISOString().split('T')[0]
+    amount: "",
+    description: "",
+    categoryId: "",
+    accountId: "",
+    destinationAccountId: "",
+    type: "EXPENSE",
+    date: new Date().toISOString().split("T")[0],
   });
 
   useEffect(() => {
     fetchData();
-  }, []);
+    dispatch(fetchAccounts());
+  }, [dispatch]);
 
   // Close filter dropdown on outside click
   useEffect(() => {
@@ -40,70 +49,105 @@ const Transactions = () => {
         setShowFilter(false);
       }
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   const fetchData = async () => {
     try {
-      const [transRes, catRes, accRes] = await Promise.all([
+      const [transRes, catRes] = await Promise.all([
         transactionService.getTransactions(),
         categoryService.getCategories(),
-        accountService.getAccounts()
       ]);
       setTransactions(transRes.data);
       setCategories(catRes.data);
-      setAccounts(accRes.data);
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      amount: "",
+      description: "",
+      categoryId: "",
+      accountId: "",
+      destinationAccountId: "",
+      type: "EXPENSE",
+      date: new Date().toISOString().split("T")[0],
+    });
+  };
+
+  const parsedAmount = parseFloat(formData.amount);
+  const normalizedAmount = Number.isFinite(parsedAmount) ? parsedAmount : 0;
+  const requiresAvailableBalance = [
+    "EXPENSE",
+    "INVESTMENT",
+    "TRANSFER",
+  ].includes(formData.type);
+  const selectedAccount = accounts.find(
+    (account) => String(account.id) === String(formData.accountId),
+  );
+  const selectedAccountBalance = Number(selectedAccount?.balance ?? 0);
+  const hasInsufficientBalance =
+    requiresAvailableBalance &&
+    formData.accountId &&
+    normalizedAmount > 0 &&
+    normalizedAmount > selectedAccountBalance;
+  const balanceValidationMessage = hasInsufficientBalance
+    ? `Insufficient balance. Available: ₱${selectedAccountBalance.toLocaleString()}`
+    : "";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (hasInsufficientBalance) {
+      return;
+    }
+
     try {
-      await transactionService.createTransaction({
+      const transactionPayload = {
         ...formData,
-        amount: parseFloat(formData.amount),
-        date: new Date(formData.date).toISOString()
-      });
+        amount: normalizedAmount,
+        date: new Date(formData.date).toISOString(),
+      };
+
+      await transactionService.createTransaction(transactionPayload);
+      dispatch(applyTransactionBalance(transactionPayload));
       setShowModal(false);
       fetchData();
-      setFormData({
-        amount: '',
-        description: '',
-        categoryId: '',
-        accountId: '',
-        destinationAccountId: '',
-        type: 'EXPENSE',
-        date: new Date().toISOString().split('T')[0]
-      });
+      resetForm();
     } catch (err) {
-      alert('Error creating transaction');
+      alert("Error creating transaction");
     }
   };
 
-  const filtered = transactions.filter(t => {
-    const matchesType = filterType === 'ALL' || t.type === filterType;
-    const matchesSearch = t.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         t.categoryName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         t.accountName?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filtered = transactions.filter((t) => {
+    const matchesType = filterType === "ALL" || t.type === filterType;
+    const matchesSearch =
+      t.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.categoryName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.accountName?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesType && matchesSearch;
   });
 
   // Calculate Pagination
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedTransactions = filtered.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedTransactions = filtered.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
 
   // Reset to page 1 on search/filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [filterType, searchQuery]);
 
-  if (loading) return <div className="loading">Loading Transactions...</div>;
+  if (loading || accountsLoading)
+    return <div className="loading">Loading Transactions...</div>;
 
   return (
     <div className="transactions-container animate-fade-in">
@@ -112,7 +156,10 @@ const Transactions = () => {
           <h1 className="text-gradient">Transactions</h1>
           <p className="text-muted">Keep track of every penny.</p>
         </div>
-        <button className="btn-primary glass" onClick={() => setShowModal(true)}>
+        <button
+          className="btn-primary glass"
+          onClick={() => setShowModal(true)}
+        >
           <Plus size={20} />
           <span>Add Transaction</span>
         </button>
@@ -127,12 +174,19 @@ const Transactions = () => {
               type="text"
               placeholder="Search transactions..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
-                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}
+                onClick={() => setSearchQuery("")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  color: "var(--text-muted)",
+                  display: "flex",
+                }}
               >
                 <X size={16} />
               </button>
@@ -140,10 +194,10 @@ const Transactions = () => {
           </div>
 
           {/* Filter dropdown */}
-          <div style={{ position: 'relative' }} ref={filterRef}>
+          <div style={{ position: "relative" }} ref={filterRef}>
             <button
-              className={`btn-icon${filterType !== 'ALL' ? ' active-filter' : ''}`}
-              onClick={() => setShowFilter(v => !v)}
+              className={`btn-icon${filterType !== "ALL" ? " active-filter" : ""}`}
+              onClick={() => setShowFilter((v) => !v)}
               title="Filter by type"
             >
               <Filter size={18} />
@@ -151,13 +205,18 @@ const Transactions = () => {
             {showFilter && (
               <div className="filter-dropdown glass animate-slide-up">
                 <p className="filter-label">Filter by type</p>
-                {TYPE_OPTIONS.map(opt => (
+                {TYPE_OPTIONS.map((opt) => (
                   <button
                     key={opt}
-                    className={`filter-option${filterType === opt ? ' selected' : ''}`}
-                    onClick={() => { setFilterType(opt); setShowFilter(false); }}
+                    className={`filter-option${filterType === opt ? " selected" : ""}`}
+                    onClick={() => {
+                      setFilterType(opt);
+                      setShowFilter(false);
+                    }}
                   >
-                    {opt === 'ALL' ? 'All Types' : opt.charAt(0) + opt.slice(1).toLowerCase()}
+                    {opt === "ALL"
+                      ? "All Types"
+                      : opt.charAt(0) + opt.slice(1).toLowerCase()}
                   </button>
                 ))}
               </div>
@@ -165,11 +224,32 @@ const Transactions = () => {
           </div>
         </div>
 
-        {filterType !== 'ALL' && (
-          <div style={{ padding: '0.5rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Showing:</span>
-            <span className="badge glass" style={{ fontSize: '0.75rem' }}>{filterType}</span>
-            <button onClick={() => setFilterType('ALL')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 0 }}>
+        {filterType !== "ALL" && (
+          <div
+            style={{
+              padding: "0.5rem 1.5rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+              Showing:
+            </span>
+            <span className="badge glass" style={{ fontSize: "0.75rem" }}>
+              {filterType}
+            </span>
+            <button
+              onClick={() => setFilterType("ALL")}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "var(--text-muted)",
+                display: "flex",
+                padding: 0,
+              }}
+            >
               <X size={14} />
             </button>
           </div>
@@ -189,21 +269,57 @@ const Transactions = () => {
             </thead>
             <tbody>
               {paginatedTransactions.length === 0 ? (
-                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>No transactions found.</td></tr>
-              ) : paginatedTransactions.map((t) => (
-                <tr key={t.id}>
-                  <td>{new Date(t.date).toLocaleDateString()}</td>
-                  <td>
-                    <span className={`badge ${t.type.toLowerCase()}`} style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem' }}>{t.type}</span>
-                  </td>
-                  <td><span className="badge glass">{t.categoryName}</span></td>
-                  <td>{t.description}</td>
-                  <td>{t.accountName}</td>
-                  <td className={t.type === 'INCOME' ? 'text-success' : t.type === 'TRANSFER' ? 'text-muted' : 'text-danger'}>
-                    {t.type === 'INCOME' ? '+' : t.type === 'TRANSFER' ? '' : '-'}₱{t.amount.toLocaleString()}
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{
+                      textAlign: "center",
+                      color: "var(--text-muted)",
+                      padding: "2rem",
+                    }}
+                  >
+                    No transactions found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginatedTransactions.map((t) => (
+                  <tr key={t.id}>
+                    <td>{new Date(t.date).toLocaleDateString()}</td>
+                    <td>
+                      <span
+                        className={`badge ${t.type.toLowerCase()}`}
+                        style={{
+                          fontSize: "0.65rem",
+                          padding: "0.15rem 0.5rem",
+                        }}
+                      >
+                        {t.type}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge glass">{t.categoryName}</span>
+                    </td>
+                    <td>{t.description}</td>
+                    <td>{t.accountName}</td>
+                    <td
+                      className={
+                        t.type === "INCOME"
+                          ? "text-success"
+                          : t.type === "TRANSFER"
+                            ? "text-muted"
+                            : "text-danger-sm"
+                      }
+                    >
+                      {t.type === "INCOME"
+                        ? "+"
+                        : t.type === "TRANSFER"
+                          ? ""
+                          : "-"}
+                      ₱{t.amount.toLocaleString()}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -211,9 +327,9 @@ const Transactions = () => {
         {/* Pagination UI */}
         {totalPages > 1 && (
           <div className="pagination">
-            <button 
+            <button
               disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => prev - 1)}
+              onClick={() => setCurrentPage((prev) => prev - 1)}
               className="btn-pagination"
             >
               Previous
@@ -223,15 +339,15 @@ const Transactions = () => {
                 <button
                   key={i + 1}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`btn-page ${currentPage === i + 1 ? 'active' : ''}`}
+                  className={`btn-page ${currentPage === i + 1 ? "active" : ""}`}
                 >
                   {i + 1}
                 </button>
               ))}
             </div>
-            <button 
+            <button
               disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => prev + 1)}
+              onClick={() => setCurrentPage((prev) => prev + 1)}
               className="btn-pagination"
             >
               Next
@@ -249,9 +365,19 @@ const Transactions = () => {
               <div className="form-grid">
                 <div className="form-group">
                   <label>Type</label>
-                  <select 
-                    value={formData.type} 
-                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                  <select
+                    value={formData.type}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        type: e.target.value,
+                        categoryId: "",
+                        destinationAccountId:
+                          e.target.value === "TRANSFER"
+                            ? formData.destinationAccountId
+                            : "",
+                      })
+                    }
                   >
                     <option value="EXPENSE">Expense</option>
                     <option value="INCOME">Income</option>
@@ -260,77 +386,124 @@ const Transactions = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Amount</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    value={formData.amount}
-                    onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                    required 
-                  />
-                </div>
-                <div className="form-group">
                   <label>Category</label>
-                  <select 
+                  <select
                     value={formData.categoryId}
-                    onChange={(e) => setFormData({...formData, categoryId: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, categoryId: e.target.value })
+                    }
                     required
                   >
                     <option value="">Select Category</option>
-                    {categories.filter(c => c.type === formData.type).map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {categories
+                      .filter((c) => c.type === formData.type)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>{formData.type === 'TRANSFER' ? 'From Account' : 'Account'}</label>
-                  <select 
+                  <label>
+                    {formData.type === "TRANSFER" ? "From Account" : "Account"}
+                  </label>
+                  <select
                     value={formData.accountId}
-                    onChange={(e) => setFormData({...formData, accountId: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        accountId: e.target.value,
+                        destinationAccountId:
+                          e.target.value === formData.destinationAccountId
+                            ? ""
+                            : formData.destinationAccountId,
+                      })
+                    }
                     required
                   >
                     <option value="">Select Account</option>
-                    {accounts.map(a => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
                     ))}
                   </select>
                 </div>
-                {formData.type === 'TRANSFER' && (
+                {formData.type === "TRANSFER" && (
                   <div className="form-group">
                     <label>To Account</label>
-                    <select 
+                    <select
                       value={formData.destinationAccountId}
-                      onChange={(e) => setFormData({...formData, destinationAccountId: e.target.value})}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          destinationAccountId: e.target.value,
+                        })
+                      }
                       required
                     >
                       <option value="">Select Destination</option>
-                      {accounts.filter(a => a.id !== formData.accountId).map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
+                      {accounts
+                        .filter((a) => a.id !== formData.accountId)
+                        .map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 )}
+                <div className="form-group">
+                  <label>Amount</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.amount}
+                    onChange={(e) =>
+                      setFormData({ ...formData, amount: e.target.value })
+                    }
+                    required
+                  />
+                  {balanceValidationMessage && (
+                    <small className="text-danger-sm">
+                      {balanceValidationMessage}
+                    </small>
+                  )}
+                </div>
                 <div className="form-group full-width">
                   <label>Description</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                   />
                 </div>
                 <div className="form-group">
                   <label>Date</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={formData.date}
-                    onChange={(e) => setFormData({...formData, date: e.target.value})}
-                    required 
+                    onChange={(e) =>
+                      setFormData({ ...formData, date: e.target.value })
+                    }
+                    required
                   />
                 </div>
               </div>
               <div className="modal-actions">
-                <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save Transaction</button>
+                <button type="button" onClick={() => setShowModal(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={hasInsufficientBalance}
+                >
+                  Save Transaction
+                </button>
               </div>
             </form>
           </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { clearSession } from '../utils/session';
 import { 
   LayoutDashboard, 
   ArrowLeftRight, 
@@ -26,8 +27,7 @@ const Sidebar = () => {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
+    clearSession();
     navigate('/login');
   };
 

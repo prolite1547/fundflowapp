@@ -1,31 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { accountService } from '../services/api';
-import { Plus, Wallet, Building2, CreditCard, Landmark, Loader2 } from 'lucide-react';
+import { fetchAccounts } from '../store/slices/accountsSlice';
+import { Plus, Wallet, Building2, CreditCard, Landmark } from 'lucide-react';
 
 const Accounts = () => {
-  const [accounts, setAccounts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     type: 'CASH',
     initialBalance: 0.00
   });
+  const dispatch = useDispatch();
+  const { items: accounts, loading } = useSelector((state) => state.accounts);
 
   useEffect(() => {
-    fetchAccounts();
-  }, []);
-
-  const fetchAccounts = async () => {
-    try {
-      const res = await accountService.getAccounts();
-      setAccounts(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    dispatch(fetchAccounts());
+  }, [dispatch]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,7 +26,7 @@ const Accounts = () => {
         initialBalance: parseFloat(formData.initialBalance)
       });
       setShowModal(false);
-      fetchAccounts();
+      dispatch(fetchAccounts());
       setFormData({ name: '', type: 'CASH', initialBalance: 0.00 });
     } catch (err) {
       alert('Error creating account');

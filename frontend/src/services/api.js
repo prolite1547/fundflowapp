@@ -1,6 +1,13 @@
 import axios from 'axios';
+import {
+  getAccessToken,
+  getRefreshToken,
+  setSessionTokens,
+  clearSession
+} from '../utils/session';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api';
+let refreshPromise = null;
 
 const api = axios.create({
   baseURL: API_URL,
@@ -11,17 +18,79 @@ const api = axios.create({
 
 // Interceptor to add auth token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
+const refreshSession = async () => {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  const refreshToken = getRefreshToken();
+
+  if (!refreshToken) {
+    clearSession();
+    throw new Error('Missing refresh token');
+  }
+
+  refreshPromise = axios
+    .post(`${API_URL}/auth/refresh?refreshToken=${refreshToken}`)
+    .then((response) => {
+      setSessionTokens({
+        accessToken: response.data.accessToken,
+        refreshToken: response.data.refreshToken ?? refreshToken
+      });
+      return response.data;
+    })
+    .catch((error) => {
+      clearSession();
+      throw error;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
+};
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    const requestUrl = originalRequest?.url ?? '';
+    const isAuthRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register') || requestUrl.includes('/auth/refresh');
+    const statusCode = error.response?.status;
+    const shouldAttemptRefresh = statusCode === 401 || statusCode === 403;
+
+    if (!shouldAttemptRefresh || originalRequest?._retry || isAuthRequest || !getRefreshToken()) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+
+    try {
+      const refreshedSession = await refreshSession();
+      originalRequest.headers = originalRequest.headers ?? {};
+      originalRequest.headers.Authorization = `Bearer ${refreshedSession.accessToken}`;
+      return api(originalRequest);
+    } catch (refreshError) {
+      return Promise.reject(refreshError);
+    }
+  }
+);
+
 export const authService = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
   refresh: (refreshToken) => api.post(`/auth/refresh?refreshToken=${refreshToken}`),
+};
+
+export const sessionService = {
+  refreshSession,
 };
 
 export const accountService = {
