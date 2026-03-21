@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { reportService } from '../services/api';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -15,11 +15,7 @@ const Reports = () => {
   const [loading, setLoading] = useState(true);
   const [breakdownType, setBreakdownType] = useState('EXPENSE');
 
-  useEffect(() => {
-    fetchReport();
-  }, [period, date, breakdownType]);
-
-  const fetchReport = async () => {
+  const fetchReport = useCallback(async () => {
     setLoading(true);
     try {
       const params = period === 'monthly' 
@@ -42,7 +38,11 @@ const Reports = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [breakdownType, date, period]);
+
+  useEffect(() => {
+    fetchReport();
+  }, [fetchReport]);
 
   const COLORS = ['#6366f1', '#ec4899', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
 

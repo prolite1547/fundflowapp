@@ -3,10 +3,12 @@ import {
   getAccessToken,
   getRefreshToken,
   setSessionTokens,
-  clearSession
+  clearSession,
+  isTokenExpired
 } from '../utils/session';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api';
+const ACCESS_TOKEN_REFRESH_SKEW_MS = 5 * 1000;
 let refreshPromise = null;
 
 const api = axios.create({
@@ -14,15 +16,6 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-});
-
-// Interceptor to add auth token
-api.interceptors.request.use((config) => {
-  const token = getAccessToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
 });
 
 const refreshSession = async () => {
@@ -57,16 +50,38 @@ const refreshSession = async () => {
   return refreshPromise;
 };
 
+const isAuthRequest = (requestUrl = '') =>
+  requestUrl.includes('/auth/login')
+  || requestUrl.includes('/auth/register')
+  || requestUrl.includes('/auth/refresh');
+
+// Refresh before protected requests when the access token is missing or about to expire.
+api.interceptors.request.use(async (config) => {
+  const requestUrl = config.url ?? '';
+  const refreshToken = getRefreshToken();
+  let accessToken = getAccessToken();
+
+  if (!isAuthRequest(requestUrl) && refreshToken && (!accessToken || isTokenExpired(accessToken, ACCESS_TOKEN_REFRESH_SKEW_MS))) {
+    const refreshedSession = await refreshSession();
+    accessToken = refreshedSession.accessToken;
+  }
+
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  return config;
+});
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     const requestUrl = originalRequest?.url ?? '';
-    const isAuthRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register') || requestUrl.includes('/auth/refresh');
     const statusCode = error.response?.status;
     const shouldAttemptRefresh = statusCode === 401 || statusCode === 403;
 
-    if (!shouldAttemptRefresh || originalRequest?._retry || isAuthRequest || !getRefreshToken()) {
+    if (!shouldAttemptRefresh || originalRequest?._retry || isAuthRequest(requestUrl) || !getRefreshToken()) {
       return Promise.reject(error);
     }
 
