@@ -12,6 +12,7 @@ import com.iamicdev.fundflowapp.security.jwt.JwtAuthenticationFilter;
 import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
 
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.beans.factory.annotation.Value;
 
 
 @Configuration
@@ -19,9 +20,17 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 public class SecurityConfig {
     
      private final JwtAuthenticationFilter jwtAuthenticationFilter;
+     private final java.util.List<String> allowedOrigins;
 
-     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+     public SecurityConfig(
+        JwtAuthenticationFilter jwtAuthenticationFilter,
+        @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000,http://localhost}") String allowedOrigins
+    ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.allowedOrigins = java.util.Arrays.stream(allowedOrigins.split(","))
+            .map(String::trim)
+            .filter(origin -> !origin.isEmpty())
+            .toList();
     }
      
     @Bean
@@ -42,7 +51,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(java.util.List.of("http://localhost:5173")); // Vite default
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);

@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: fundflow-db
+    environment:
+      POSTGRES_DB: fundflowapp
+      POSTGRES_USER: fundflow
+      POSTGRES_PASSWORD: fundflow
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fundflow -d fundflowapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: fundflow-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/fundflowapp
+      SPRING_DATASOURCE_USERNAME: fundflow
+      SPRING_DATASOURCE_PASSWORD: fundflow
+      JWT_SECRET: 6a142d125ebf46308ef094d01f5453a05ef73e1de30255f65ac9362bb789f5de
+      JWT_EXPIRATION: 900
+      JWT_REFRESH_EXPIRATION: 604800
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    container_name: fundflow-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres-data:
