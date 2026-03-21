@@ -3,9 +3,11 @@ package com.iamicdev.fundflowapp.strategy
 import com.iamicdev.fundflowapp.model.Account
 import com.iamicdev.fundflowapp.model.AccountType
 import com.iamicdev.fundflowapp.strategy.base.TransactionContext
+import groovy.transform.CompileDynamic
 import spock.lang.Specification
 import spock.lang.Unroll
 
+@CompileDynamic
 class TransactionStrategySpec extends Specification {
 
     Account makeAccount(double balance) {

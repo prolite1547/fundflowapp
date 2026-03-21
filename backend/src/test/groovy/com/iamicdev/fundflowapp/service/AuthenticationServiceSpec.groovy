@@ -1,21 +1,21 @@
 package com.iamicdev.fundflowapp.service
 
-import com.iamicdev.fundflowapp.dto.request.RegisterRequest
 import com.iamicdev.fundflowapp.dto.request.LoginRequest
-import com.iamicdev.fundflowapp.dto.response.AuthResponse
+import com.iamicdev.fundflowapp.dto.request.RegisterRequest
 import com.iamicdev.fundflowapp.jwt.JwtService
 import com.iamicdev.fundflowapp.model.RefreshToken
 import com.iamicdev.fundflowapp.model.Role
 import com.iamicdev.fundflowapp.model.User
 import com.iamicdev.fundflowapp.repository.RefreshTokenRepository
 import com.iamicdev.fundflowapp.repository.UserRepository
+import groovy.transform.CompileDynamic
 import org.springframework.security.crypto.password.PasswordEncoder
 import spock.lang.Specification
 import spock.lang.Unroll
 
 import java.time.Instant
-import java.util.Optional
 
+@CompileDynamic
 class AuthenticationServiceSpec extends Specification {
 
     UserRepository userRepository = Mock()

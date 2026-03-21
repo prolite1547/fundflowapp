@@ -58,7 +58,9 @@ public class JwtService {
     }
 
     public Boolean isTokenValid(String token){
-    if(token == null || token.isEmpty()) return false;    
+        if (token == null || token.isEmpty()) {
+            return false;
+        }
         try {
             parseClaims(token);
             return true;
