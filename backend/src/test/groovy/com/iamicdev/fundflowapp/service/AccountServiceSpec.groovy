@@ -5,9 +5,11 @@ import com.iamicdev.fundflowapp.model.Account
 import com.iamicdev.fundflowapp.model.AccountType
 import com.iamicdev.fundflowapp.model.User
 import com.iamicdev.fundflowapp.repository.AccountRepository
+import groovy.transform.CompileDynamic
 import spock.lang.Specification
 import spock.lang.Unroll
 
+@CompileDynamic
 class AccountServiceSpec extends Specification {
 
     AccountRepository accountRepository = Mock()

@@ -3,7 +3,11 @@ package com.iamicdev.fundflowapp.controller;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.iamicdev.fundflowapp.dto.request.CreateAccountRequest;
 import com.iamicdev.fundflowapp.dto.response.AccountResponse;
@@ -19,13 +23,13 @@ public class AccountController {
     private final AccountService accountService;
 
     @PostMapping
-    public ResponseEntity<AccountResponse> createAccount(@RequestBody CreateAccountRequest request){
+    public ResponseEntity<AccountResponse> createAccount(@RequestBody CreateAccountRequest request) {
         System.out.println("CONTROLLER: POST /api/accounts - " + request.getName());
         return ResponseEntity.ok(accountService.createAccount(request));
     }
 
     @GetMapping
-    public ResponseEntity<List<AccountResponse>> getMyAccounts(){
+    public ResponseEntity<List<AccountResponse>> getMyAccounts() {
         System.out.println("CONTROLLER: GET /api/accounts");
         return ResponseEntity.ok(accountService.getMyAccounts());
     }

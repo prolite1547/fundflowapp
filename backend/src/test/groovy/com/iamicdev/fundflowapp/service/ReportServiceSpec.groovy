@@ -1,20 +1,19 @@
 package com.iamicdev.fundflowapp.service
 
-import com.iamicdev.fundflowapp.dto.response.AccountBalanceResponse
 import com.iamicdev.fundflowapp.model.Account
 import com.iamicdev.fundflowapp.model.AccountType
+import com.iamicdev.fundflowapp.model.Transaction
+import com.iamicdev.fundflowapp.model.TransactionType
 import com.iamicdev.fundflowapp.model.User
 import com.iamicdev.fundflowapp.repository.AccountRepository
 import com.iamicdev.fundflowapp.repository.TransactionRepository
-import com.iamicdev.fundflowapp.dto.SummaryArg
+import groovy.transform.CompileDynamic
 import java.time.LocalDate
-import spock.lang.Specification
-import com.iamicdev.fundflowapp.model.TransactionType
-import com.iamicdev.fundflowapp.model.Transaction
 import java.time.Instant
 import java.time.ZoneId
-import java.util.UUID
+import spock.lang.Specification
 
+@CompileDynamic
 class ReportServiceSpec extends Specification {
 
     TransactionRepository transactionRepository = Mock()

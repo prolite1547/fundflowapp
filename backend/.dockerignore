@@ -1,0 +1,6 @@
+.gradle
+build
+bin
+backend.log
+src/test
+.DS_Store
