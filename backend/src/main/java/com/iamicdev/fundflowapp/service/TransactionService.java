@@ -20,6 +20,7 @@ import com.iamicdev.fundflowapp.model.TransactionType;
 import com.iamicdev.fundflowapp.model.Transaction;
 import com.iamicdev.fundflowapp.model.Account;
 import com.iamicdev.fundflowapp.model.Category;
+import com.iamicdev.fundflowapp.exception.ResourceNotFoundException;
 
 @RequiredArgsConstructor
 @Service
@@ -39,12 +40,12 @@ public class TransactionService {
         var type = TransactionType.valueOf(request.getType());
 
         Account sourceAccount = accountRepository.findById(request.getAccountId())
-            .orElseThrow(() -> new RuntimeException("Account not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
         Account destinationAccount = null;
 
         if(type == TransactionType.TRANSFER) {
             destinationAccount = accountRepository.findById(request.getDestinationAccountId())
-                .orElseThrow(() -> new RuntimeException("Destination account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Destination account not found"));
         }
 
         TransactionContext context = TransactionContext.builder()

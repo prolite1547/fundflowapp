@@ -3,6 +3,7 @@ package com.iamicdev.fundflowapp.strategy
 import com.iamicdev.fundflowapp.model.Account
 import com.iamicdev.fundflowapp.model.AccountType
 import com.iamicdev.fundflowapp.strategy.base.TransactionContext
+import com.iamicdev.fundflowapp.exception.BadRequestException
 import groovy.transform.CompileDynamic
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -170,7 +171,7 @@ class TransactionStrategySpec extends Specification {
         new TransferStrategy().apply(context)
 
         then:
-        thrown(IllegalStateException)
+        thrown(BadRequestException)
     }
 
     def "TransferStrategy - throws when source account is null"() {
@@ -186,7 +187,7 @@ class TransactionStrategySpec extends Specification {
         new TransferStrategy().apply(context)
 
         then:
-        thrown(IllegalStateException)
+        thrown(BadRequestException)
     }
 
     def "TransferStrategy - transfers full balance correctly"() {

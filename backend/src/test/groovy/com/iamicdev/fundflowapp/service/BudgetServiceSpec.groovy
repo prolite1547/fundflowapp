@@ -7,6 +7,7 @@ import com.iamicdev.fundflowapp.model.TransactionType
 import com.iamicdev.fundflowapp.model.User
 import com.iamicdev.fundflowapp.repository.BudgetRepository
 import com.iamicdev.fundflowapp.repository.CategoryRepository
+import com.iamicdev.fundflowapp.exception.ConflictException
 import groovy.transform.CompileDynamic
 import spock.lang.Specification
 
@@ -70,7 +71,7 @@ class BudgetServiceSpec extends Specification {
         budgetService.createBudget(request)
 
         then:
-        thrown(RuntimeException)
+        thrown(ConflictException)
     }
 
     def "createBudget - associates budget with authenticated user"() {

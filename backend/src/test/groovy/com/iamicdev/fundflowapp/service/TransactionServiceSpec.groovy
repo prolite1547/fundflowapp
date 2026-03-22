@@ -1,6 +1,7 @@
 package com.iamicdev.fundflowapp.service
 
 import com.iamicdev.fundflowapp.dto.request.CreateTransactionRequest
+import com.iamicdev.fundflowapp.exception.ResourceNotFoundException
 import com.iamicdev.fundflowapp.model.Account
 import com.iamicdev.fundflowapp.model.Category
 import com.iamicdev.fundflowapp.model.Transaction
@@ -154,7 +155,7 @@ class TransactionServiceSpec extends Specification {
         transactionService.createTransaction(request)
 
         then:
-        thrown(RuntimeException)
+        thrown(ResourceNotFoundException)
     }
 
     def "createTransaction - maps response fields correctly including names"() {
