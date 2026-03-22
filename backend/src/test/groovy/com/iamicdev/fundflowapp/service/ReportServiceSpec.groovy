@@ -6,6 +6,7 @@ import com.iamicdev.fundflowapp.model.Transaction
 import com.iamicdev.fundflowapp.model.TransactionType
 import com.iamicdev.fundflowapp.model.User
 import com.iamicdev.fundflowapp.repository.AccountRepository
+import com.iamicdev.fundflowapp.repository.BudgetRepository
 import com.iamicdev.fundflowapp.repository.TransactionRepository
 import groovy.transform.CompileDynamic
 import java.time.LocalDate
@@ -19,13 +20,14 @@ class ReportServiceSpec extends Specification {
     TransactionRepository transactionRepository = Mock()
     AuthenticationService authenticationService = Mock()
     AccountRepository accountRepository = Mock()
+    BudgetRepository budgetRepository = Mock()
     ReportService reportService
 
     UUID userId = UUID.randomUUID()
     User mockUser
 
     def setup() {
-        reportService = new ReportService(transactionRepository, authenticationService, accountRepository)
+        reportService = new ReportService(transactionRepository, authenticationService, accountRepository, budgetRepository)
         mockUser = new User()
         mockUser.setId(userId)
         mockUser.setEmail("john@example.com")

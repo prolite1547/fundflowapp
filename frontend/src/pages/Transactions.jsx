@@ -1,24 +1,25 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { transactionService, categoryService } from "../services/api";
-import {
-  fetchAccounts,
-  applyTransactionBalance,
-} from "../store/slices/accountsSlice";
-import { Plus, Search, Filter, X } from "lucide-react";
+import { fetchAccounts } from "../store/slices/accountsSlice";
+import { fetchTransactions, addTransactionAction } from "../store/slices/transactionsSlice";
+import { fetchCategories } from "../store/slices/categoriesSlice";
+import { fetchBudgets } from "../store/slices/budgetsSlice";
+import { Plus, Search, Filter, X, AlertTriangle, AlertCircle } from "lucide-react";
 import { toast } from 'react-hot-toast';
 
 const TYPE_OPTIONS = ["ALL", "EXPENSE", "INCOME", "INVESTMENT", "TRANSFER"];
 
 const Transactions = () => {
   const dispatch = useDispatch();
-  const { items: accounts, loading: accountsLoading } = useSelector(
-    (state) => state.accounts,
-  );
-  const [transactions, setTransactions] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { items: accounts, loading: accountsLoading } = useSelector((state) => state.accounts);
+  const { items: transactions, loading: txLoading } = useSelector((state) => state.transactions);
+  const { items: categories, loading: catLoading } = useSelector((state) => state.categories);
+  const { items: budgets, loading: budgetsLoading } = useSelector((state) => state.budgets);
+
   const [showModal, setShowModal] = useState(false);
+  const [confirmBudgetModal, setConfirmBudgetModal] = useState(false);
+  const [pendingTransaction, setPendingTransaction] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("ALL");
 
@@ -39,35 +40,12 @@ const Transactions = () => {
   });
 
   useEffect(() => {
-    fetchData();
     dispatch(fetchAccounts());
+    dispatch(fetchTransactions());
+    dispatch(fetchCategories());
+    const now = new Date();
+    dispatch(fetchBudgets({ month: now.getMonth() + 1, year: now.getFullYear() }));
   }, [dispatch]);
-
-  // Close filter dropdown on outside click
-  useEffect(() => {
-    const handleClick = (e) => {
-      if (filterRef.current && !filterRef.current.contains(e.target)) {
-        setShowFilter(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const [transRes, catRes] = await Promise.all([
-        transactionService.getTransactions(),
-        categoryService.getCategories(),
-      ]);
-      setTransactions(transRes.data);
-      setCategories(catRes.data);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const resetForm = () => {
     setFormData({
@@ -108,21 +86,39 @@ const Transactions = () => {
       return;
     }
 
-    try {
-      const transactionPayload = {
-        ...formData,
-        amount: normalizedAmount,
-        date: new Date(formData.date).toISOString(),
-      };
+    const transactionPayload = {
+      ...formData,
+      amount: normalizedAmount,
+      date: new Date(formData.date).toISOString(),
+    };
 
-      await transactionService.createTransaction(transactionPayload);
-      dispatch(applyTransactionBalance(transactionPayload));
+    if (formData.type === "EXPENSE" && formData.categoryId) {
+      const budget = budgets.find((b) => b.categoryId === formData.categoryId);
+      if (budget) {
+        const projectedSpent = budget.spentAmount + normalizedAmount;
+        if (projectedSpent > budget.limitAmount) {
+          setPendingTransaction(transactionPayload);
+          setShowModal(false);
+          setConfirmBudgetModal(true);
+          return;
+        }
+      }
+    }
+
+    executeTransaction(transactionPayload);
+  };
+
+  const executeTransaction = async (payload) => {
+    try {
+      await dispatch(addTransactionAction(payload)).unwrap();
       setShowModal(false);
-      fetchData();
       resetForm();
+      // Re-fetch budgets to update remaining amounts
+      const now = new Date();
+      dispatch(fetchBudgets({ month: now.getMonth() + 1, year: now.getFullYear() }));
       toast.success('Transaction created successfully');
     } catch (err) {
-      toast.error(err.response?.data?.message || "Error creating transaction");
+      toast.error(err || "Error creating transaction");
     }
   };
 
@@ -148,8 +144,26 @@ const Transactions = () => {
     setCurrentPage(1);
   }, [filterType, searchQuery]);
 
-  if (loading || accountsLoading)
-    return <div className="loading">Loading Transactions...</div>;
+  const isLoading = accountsLoading || txLoading || catLoading || budgetsLoading;
+
+  if (isLoading) return <div className="loading">Loading Transactions...</div>;
+
+  const totalAllocatedBudget = budgets.reduce((sum, b) => sum + b.limitAmount, 0);
+  const totalSpentBudget = budgets.reduce((sum, b) => sum + b.spentAmount, 0);
+  const totalBudgetLeft = Math.max(0, totalAllocatedBudget - totalSpentBudget);
+  const globalBudgetPercentage = totalAllocatedBudget > 0 ? (totalSpentBudget / totalAllocatedBudget) * 100 : 0;
+
+  const activeBudget = formData.type === 'EXPENSE' && formData.categoryId 
+    ? budgets.find(b => b.categoryId === formData.categoryId) 
+    : null;
+
+  const currentSpent = activeBudget ? activeBudget.spentAmount : 0;
+  const projectedSpentInline = activeBudget ? currentSpent + normalizedAmount : 0;
+  const inlinePercentage = activeBudget ? (projectedSpentInline / activeBudget.limitAmount) * 100 : 0;
+
+  const isOverspending = inlinePercentage > 100;
+  const isHardWarning = inlinePercentage >= 90 && inlinePercentage <= 100;
+  const isSoftWarning = inlinePercentage >= 70 && inlinePercentage < 90;
 
   return (
     <div className="transactions-container animate-fade-in">
@@ -166,6 +180,31 @@ const Transactions = () => {
           <span>Add Transaction</span>
         </button>
       </header>
+
+      {/* Monthly Budget Summary */}
+      <div className="glass card" style={{ marginBottom: '1.5rem', padding: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+          <div>
+            <h3 style={{ margin: 0, color: 'var(--text-color)' }}>Monthly Allocated Budget</h3>
+            <p className="text-muted" style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem' }}>Total limit set across all categories</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <h3 style={{ margin: 0, color: 'var(--text-color)' }}>₱{totalBudgetLeft.toLocaleString()} <span style={{fontSize:'0.9rem', color:'var(--text-muted)', fontWeight:'normal'}}>left</span></h3>
+            <p className="text-muted" style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem' }}>of ₱{totalAllocatedBudget.toLocaleString()}</p>
+          </div>
+        </div>
+        <div className="progress-bg" style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+          <div 
+            className="progress-fill" 
+            style={{ 
+              width: `${Math.min(globalBudgetPercentage, 100)}%`, 
+              height: '100%', 
+              background: globalBudgetPercentage >= 90 ? '#ef4444' : globalBudgetPercentage >= 70 ? '#f59e0b' : '#10b981',
+              transition: 'all 0.3s ease'
+             }}
+          ></div>
+        </div>
+      </div>
 
       {/* Transaction List */}
       <div className="glass card trans-list">
@@ -473,6 +512,33 @@ const Transactions = () => {
                     </small>
                   )}
                 </div>
+                {activeBudget && formData.amount && Number(formData.amount) > 0 && (
+                  <div className="form-group full-width">
+                    <div style={{ padding: '1rem', background: 'var(--bg-card)', borderRadius: '8px', border: isOverspending ? '1px solid #ef4444' : isHardWarning ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.05)' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '0.6rem', color: isOverspending ? '#ef4444' : isHardWarning ? '#f59e0b' : 'var(--text-color)' }}>
+                         <span style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+                           {(isOverspending || isHardWarning) && <AlertTriangle size={16} />} 
+                           Category Budget ({activeBudget.categoryName})
+                         </span>
+                         <span style={{ fontWeight: '500' }}>₱{projectedSpentInline.toLocaleString()} / ₱{activeBudget.limitAmount.toLocaleString()}</span>
+                       </div>
+                       <div className="progress-bg" style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+                         <div 
+                           className="progress-fill" 
+                           style={{ 
+                             width: `${Math.min(inlinePercentage, 100)}%`, 
+                             height: '100%', 
+                             background: isOverspending ? '#ef4444' : isHardWarning ? '#ef4444' : isSoftWarning ? '#f59e0b' : '#10b981',
+                             transition: 'all 0.3s ease'
+                            }}
+                         ></div>
+                       </div>
+                       {isOverspending && <small style={{ color: '#ef4444', display: 'block', marginTop: '0.5rem' }}>You are exceeding your budget!</small>}
+                       {isHardWarning && <small style={{ color: '#f59e0b', display: 'block', marginTop: '0.5rem' }}>Warning: Nearing budget limit (90%+)</small>}
+                       {isSoftWarning && <small style={{ color: '#f59e0b', display: 'block', marginTop: '0.5rem' }}>Warning: Budget usage at 70%+</small>}
+                    </div>
+                  </div>
+                )}
                 <div className="form-group full-width">
                   <label>Description</label>
                   <input
@@ -508,6 +574,40 @@ const Transactions = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Budget Overspending Interception Modal */}
+      {confirmBudgetModal && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content animate-slide-up" style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+              <AlertCircle size={48} color="#ef4444" />
+            </div>
+            <h2 style={{ color: '#ef4444', marginBottom: '0.5rem' }}>Budget Exceeded</h2>
+            <p className="text-muted" style={{ marginBottom: '1.5rem', lineHeight: '1.5' }}>
+              This transaction will exceed your allocated monthly budget for this category. Are you sure you wish to proceed?
+            </p>
+            <div className="modal-actions" style={{ justifyContent: 'center', gap: '1rem' }}>
+              <button type="button" onClick={() => {
+                  setConfirmBudgetModal(false);
+                  setShowModal(true);
+              }}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ background: '#ef4444', borderColor: '#ef4444' }}
+                onClick={() => {
+                  setConfirmBudgetModal(false);
+                  executeTransaction(pendingTransaction);
+                }}
+              >
+                Proceed Anyway
+              </button>
+            </div>
           </div>
         </div>
       )}

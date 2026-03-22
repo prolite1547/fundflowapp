@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchAccounts } from '../store/slices/accountsSlice';
 import { budgetService, categoryService } from '../services/api';
 import { toast } from 'react-hot-toast';
-import { Plus, Target, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Plus, Target, AlertTriangle, CheckCircle, Edit2 } from 'lucide-react';
 
 const Budgets = () => {
   const dispatch = useDispatch();
@@ -12,6 +12,7 @@ const Budgets = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   
   const [filterMonthYear, setFilterMonthYear] = useState(new Date().toISOString().substring(0, 7));
   
@@ -20,6 +21,23 @@ const Budgets = () => {
     categoryId: '',
     monthYear: new Date().toISOString().substring(0, 7)
   });
+
+  const handleOpenCreateModal = () => {
+    setFormData({ limitAmount: '', categoryId: '', monthYear: filterMonthYear });
+    setIsEditing(false);
+    setShowModal(true);
+  };
+
+  const handleEditBudget = (budget) => {
+    const monthStr = budget.month.toString().padStart(2, '0');
+    setFormData({
+      limitAmount: budget.limitAmount,
+      categoryId: budget.categoryId,
+      monthYear: `${budget.year}-${monthStr}`
+    });
+    setIsEditing(true);
+    setShowModal(true);
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -43,16 +61,25 @@ const Budgets = () => {
   }, [fetchData, dispatch]);
 
   const totalFunds = accounts.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
+  
+  // The true obligation is the unspent portion of the allocated budgets.
+  const remainingBudgetObligations = budgets.reduce((sum, b) => {
+    return sum + Math.max(0, Number(b.limitAmount || 0) - Number(b.spentAmount || 0));
+  }, 0);
+  
   const currentTotalBudgetLimits = budgets.reduce((sum, b) => sum + Number(b.limitAmount || 0), 0);
-  const availableFundsForBudgeting = Math.max(0, totalFunds - currentTotalBudgetLimits);
+  
+  const readyToAssign = Math.max(0, totalFunds - remainingBudgetObligations);
+  const fundingGap = Math.max(0, remainingBudgetObligations - totalFunds);
 
   const parsedLimit = parseFloat(formData.limitAmount);
   const normalizedLimit = Number.isFinite(parsedLimit) ? parsedLimit : 0;
-  const isExceedingFunds = formData.limitAmount && normalizedLimit > availableFundsForBudgeting;
+  
+  // Funding Gap Warning instead of strict block
+  const isExceedingFunds = formData.limitAmount && normalizedLimit > readyToAssign;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isExceedingFunds) return;
 
     try {
       const [yearStr, monthStr] = formData.monthYear.split('-');
@@ -64,12 +91,7 @@ const Budgets = () => {
       });
       setShowModal(false);
       fetchData();
-      setFormData({
-        limitAmount: '',
-        categoryId: '',
-        monthYear: new Date().toISOString().substring(0, 7)
-      });
-      toast.success('Budget created successfully');
+      toast.success(isEditing ? 'Budget updated successfully' : 'Budget created successfully');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error creating budget');
     }
@@ -95,12 +117,50 @@ const Budgets = () => {
               style={{ background: 'none', border: 'none', color: 'white', outline: 'none', fontSize: '0.875rem' }}
             />
           </div>
-          <button className="btn-primary glass" onClick={() => setShowModal(true)}>
+          <button className="btn-primary glass" onClick={handleOpenCreateModal}>
             <Plus size={20} />
             <span>Set Budget</span>
           </button>
         </div>
       </header>
+
+      {/* Funding Gap / Ready to Assign Dashboard */}
+      <div className="glass card animate-slide-up" style={{ marginBottom: '2rem', padding: '1.5rem', borderLeft: fundingGap > 0 ? '6px solid #ef4444' : '6px solid #10b981' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '280px' }}>
+            {fundingGap > 0 ? (
+               <>
+                 <h2 style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0 0 0.5rem 0', fontSize: '1.4rem' }}>
+                   <AlertTriangle size={24} /> Funding Gap: ₱{fundingGap.toLocaleString()}
+                 </h2>
+                 <p className="text-muted" style={{ margin: 0, lineHeight: 1.5, fontSize: '0.95rem' }}>
+                   You have budgeted <strong>₱{fundingGap.toLocaleString()}</strong> more than you possess across all accounts. You are relying on expected income to fulfill these limits.
+                 </p>
+               </>
+            ) : (
+               <>
+                 <h2 style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0 0 0.5rem 0', fontSize: '1.4rem' }}>
+                   <CheckCircle size={24} /> Ready to Assign: ₱{readyToAssign.toLocaleString()}
+                 </h2>
+                 <p className="text-muted" style={{ margin: 0, lineHeight: 1.5, fontSize: '0.95rem' }}>
+                   You have <strong>₱{readyToAssign.toLocaleString()}</strong> in unallocated cash available to assign to budget categories.
+                 </p>
+               </>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '2rem', background: 'rgba(0,0,0,0.2)', padding: '1.25rem', borderRadius: '12px' }}>
+             <div>
+               <p className="text-muted" style={{ margin: '0 0 0.4rem 0', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Balances</p>
+               <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff' }}>₱{totalFunds.toLocaleString()}</h3>
+             </div>
+             <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }}></div>
+             <div>
+               <p className="text-muted" style={{ margin: '0 0 0.4rem 0', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Unspent Budgets</p>
+               <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff' }}>₱{remainingBudgetObligations.toLocaleString()}</h3>
+             </div>
+          </div>
+        </div>
+      </div>
 
       <div className="budgets-grid">
         {budgets.length > 0 ? (
@@ -112,10 +172,19 @@ const Budgets = () => {
               <div key={b.id} className="glass card budget-card">
                 <div className="budget-header">
                   <h3>{b.categoryName || 'Unknown Category'}</h3>
-                  <span className={`status-badge ${isOver ? 'danger' : 'success'}`}>
-                    {isOver ? <AlertTriangle size={14} /> : <CheckCircle size={14} />}
-                    {isOver ? 'Over Budget' : 'On Track'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className={`status-badge ${isOver ? 'danger' : 'success'}`}>
+                      {isOver ? <AlertTriangle size={14} /> : <CheckCircle size={14} />}
+                      {isOver ? 'Over Budget' : 'On Track'}
+                    </span>
+                    <button 
+                      onClick={() => handleEditBudget(b)} 
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.2rem', display: 'flex', alignItems: 'center' }}
+                      title="Edit Budget"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="budget-progress">
@@ -147,7 +216,7 @@ const Budgets = () => {
             <button 
               className="btn-primary" 
               style={{ margin: '1rem auto 0' }}
-              onClick={() => setShowModal(true)}
+              onClick={handleOpenCreateModal}
             >
               Create Your First Budget
             </button>
@@ -159,7 +228,7 @@ const Budgets = () => {
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content animate-slide-up">
-            <h2>Set Category Budget</h2>
+            <h2>{isEditing ? 'Adjust Category Budget' : 'Set Category Budget'}</h2>
             <form onSubmit={handleSubmit}>
               <div className="form-grid">
                 <div className="form-group">
@@ -168,6 +237,7 @@ const Budgets = () => {
                     value={formData.categoryId}
                     onChange={(e) => setFormData({...formData, categoryId: e.target.value})}
                     required
+                    disabled={isEditing}
                   >
                     <option value="">Select Category</option>
                     {categories.map(c => (
@@ -185,8 +255,9 @@ const Budgets = () => {
                     required 
                   />
                   {isExceedingFunds && (
-                    <small className="text-danger-sm" style={{ marginTop: '0.25rem', display: 'block' }}>
-                      Limit exceeds available funds. Max available: ₱{availableFundsForBudgeting.toLocaleString()}
+                    <small style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem', color: '#f59e0b', fontSize: '0.8rem' }}>
+                      <AlertTriangle size={14} /> 
+                      Warning: This allocation exceeds current cash and will increase your Funding Gap.
                     </small>
                   )}
                 </div>
@@ -197,12 +268,13 @@ const Budgets = () => {
                     value={formData.monthYear}
                     onChange={(e) => setFormData({...formData, monthYear: e.target.value})}
                     required 
+                    disabled={isEditing}
                   />
                 </div>
               </div>
               <div className="modal-actions">
                 <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={isExceedingFunds}>Create Budget</button>
+                <button type="submit" className="btn-primary">{isEditing ? 'Save Changes' : 'Create Budget'}</button>
               </div>
             </form>
           </div>
