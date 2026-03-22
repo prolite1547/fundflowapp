@@ -1,8 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchAccounts } from '../store/slices/accountsSlice';
 import { budgetService, categoryService } from '../services/api';
 import { Plus, Target, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const Budgets = () => {
+  const dispatch = useDispatch();
+  const { items: accounts, loading: accountsLoading } = useSelector(state => state.accounts);
   const [budgets, setBudgets] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,15 +38,26 @@ const Budgets = () => {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    dispatch(fetchAccounts());
+  }, [fetchData, dispatch]);
+
+  const totalFunds = accounts.reduce((sum, acc) => sum + Number(acc.balance || 0), 0);
+  const currentTotalBudgetLimits = budgets.reduce((sum, b) => sum + Number(b.limitAmount || 0), 0);
+  const availableFundsForBudgeting = Math.max(0, totalFunds - currentTotalBudgetLimits);
+
+  const parsedLimit = parseFloat(formData.limitAmount);
+  const normalizedLimit = Number.isFinite(parsedLimit) ? parsedLimit : 0;
+  const isExceedingFunds = formData.limitAmount && normalizedLimit > availableFundsForBudgeting;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isExceedingFunds) return;
+
     try {
       const [yearStr, monthStr] = formData.monthYear.split('-');
       await budgetService.createBudget({
         categoryId: formData.categoryId,
-        limitAmount: parseFloat(formData.limitAmount),
+        limitAmount: normalizedLimit,
         month: parseInt(monthStr, 10),
         year: parseInt(yearStr, 10)
       });
@@ -58,7 +73,7 @@ const Budgets = () => {
     }
   };
 
-  if (loading) return <div className="loading">Loading Budgets...</div>;
+  if (loading || accountsLoading) return <div className="loading">Loading Budgets...</div>;
 
   return (
     <div className="budgets-container animate-fade-in">
@@ -167,6 +182,11 @@ const Budgets = () => {
                     onChange={(e) => setFormData({...formData, limitAmount: e.target.value})}
                     required 
                   />
+                  {isExceedingFunds && (
+                    <small className="text-danger-sm" style={{ marginTop: '0.25rem', display: 'block' }}>
+                      Limit exceeds available funds. Max available: ₱{availableFundsForBudgeting.toLocaleString()}
+                    </small>
+                  )}
                 </div>
                 <div className="form-group full-width">
                   <label>Target Month</label>
@@ -180,7 +200,7 @@ const Budgets = () => {
               </div>
               <div className="modal-actions">
                 <button type="button" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Create Budget</button>
+                <button type="submit" className="btn-primary" disabled={isExceedingFunds}>Create Budget</button>
               </div>
             </form>
           </div>
