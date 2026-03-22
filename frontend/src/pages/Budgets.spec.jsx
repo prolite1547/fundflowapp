@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { configureStore } from '@reduxjs/toolkit';
+import { Provider } from 'react-redux';
 import Budgets from './Budgets';
 
 const mockGetBudgets = vi.fn();
@@ -17,6 +19,14 @@ vi.mock('../services/api', () => ({
     getCategories: (...args) => mockGetCategories(...args),
   },
 }));
+
+vi.mock('../store/slices/accountsSlice', () => ({
+  fetchAccounts: () => ({ type: 'accounts/fetchAccounts' }),
+}));
+
+const mockAccounts = [
+  { id: 'a1', name: 'Checkings', balance: 20000 }
+];
 
 const mockBudget = {
   id: 'b1',
@@ -38,11 +48,20 @@ const mockExpenseCategories = [
   { id: 'c1', name: 'Groceries', type: 'EXPENSE' },
 ];
 
-const renderBudgets = () =>
+const createStore = (accounts = mockAccounts, loading = false) =>
+  configureStore({
+    reducer: {
+      accounts: () => ({ items: accounts, loading }),
+    },
+  });
+
+const renderBudgets = (accounts = mockAccounts, accountsLoading = false) =>
   render(
-    <MemoryRouter>
-      <Budgets />
-    </MemoryRouter>
+    <Provider store={createStore(accounts, accountsLoading)}>
+      <MemoryRouter>
+        <Budgets />
+      </MemoryRouter>
+    </Provider>
   );
 
 describe('Budgets page', () => {
@@ -123,7 +142,7 @@ describe('Budgets page', () => {
     const selects = screen.getAllByRole('combobox');
     await userEvent.selectOptions(selects[0], 'c1');
 
-    // Enter limit amount
+    // Enter limit amount (valid amount that doesn't exceed 20,000 balance minus 5000 existing limit = 15000)
     const limitInput = screen.getAllByRole('spinbutton')[0];
     await userEvent.clear(limitInput);
     await userEvent.type(limitInput, '10000');
@@ -134,6 +153,25 @@ describe('Budgets page', () => {
       expect(mockCreateBudget).toHaveBeenCalledWith(
         expect.objectContaining({ limitAmount: 10000 })
       );
+    });
+  });
+
+  it('shows error if new limit exceeds available total funds', async () => {
+    renderBudgets();
+    await waitFor(() => screen.getByText('Budgets'));
+
+    await userEvent.click(screen.getByRole('button', { name: /set budget/i }));
+
+    const limitInput = screen.getAllByRole('spinbutton')[0];
+    await userEvent.clear(limitInput);
+    
+    // Existing limit is 5,000, Total accounts balance is 20,000 -> Available = 15,000.
+    // Entering 15,001 should trigger validation.
+    await userEvent.type(limitInput, '15001');
+
+    await waitFor(() => {
+      expect(screen.getByText(/Limit exceeds available funds/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /create budget/i })).toBeDisabled();
     });
   });
 });
