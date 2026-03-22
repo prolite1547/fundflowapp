@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/api';
+import { toast } from 'react-hot-toast';
 import { Lock, Mail, User, Loader2 } from 'lucide-react';
 
 const Register = () => {
@@ -20,6 +21,7 @@ const Register = () => {
 
     try {
       await authService.register(formData);
+      toast.success('Registration successful! Please log in.');
       navigate('/login');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create account');

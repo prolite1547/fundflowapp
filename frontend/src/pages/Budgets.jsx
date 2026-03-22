@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchAccounts } from '../store/slices/accountsSlice';
 import { budgetService, categoryService } from '../services/api';
+import { toast } from 'react-hot-toast';
 import { Plus, Target, AlertTriangle, CheckCircle } from 'lucide-react';
 
 const Budgets = () => {
@@ -68,8 +69,9 @@ const Budgets = () => {
         categoryId: '',
         monthYear: new Date().toISOString().substring(0, 7)
       });
-    } catch {
-      alert('Error creating budget');
+      toast.success('Budget created successfully');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error creating budget');
     }
   };
 

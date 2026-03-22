@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import SessionTimeoutPrompt from './components/SessionTimeoutPrompt';
 
@@ -79,6 +80,7 @@ function App() {
 
   return (
     <Router>
+      <Toaster position="top-right" />
       <SessionTimeoutPrompt isAuthenticated={authenticated} />
       <Routes>
         <Route

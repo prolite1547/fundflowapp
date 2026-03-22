@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { accountService } from '../services/api';
 import { fetchAccounts } from '../store/slices/accountsSlice';
+import { toast } from 'react-hot-toast';
 import { Plus, Wallet, Building2, CreditCard, Landmark } from 'lucide-react';
 
 const Accounts = () => {
@@ -28,8 +29,9 @@ const Accounts = () => {
       setShowModal(false);
       dispatch(fetchAccounts());
       setFormData({ name: '', type: 'CASH', initialBalance: 0.00 });
-    } catch {
-      alert('Error creating account');
+      toast.success('Account created successfully');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error creating account');
     }
   };
 

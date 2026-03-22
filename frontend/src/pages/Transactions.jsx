@@ -6,6 +6,7 @@ import {
   applyTransactionBalance,
 } from "../store/slices/accountsSlice";
 import { Plus, Search, Filter, X } from "lucide-react";
+import { toast } from 'react-hot-toast';
 
 const TYPE_OPTIONS = ["ALL", "EXPENSE", "INCOME", "INVESTMENT", "TRANSFER"];
 
@@ -119,8 +120,9 @@ const Transactions = () => {
       setShowModal(false);
       fetchData();
       resetForm();
-    } catch {
-      alert("Error creating transaction");
+      toast.success('Transaction created successfully');
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Error creating transaction");
     }
   };
 

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { categoryService } from '../services/api';
+import { toast } from 'react-hot-toast';
 import { Plus, Tag } from 'lucide-react';
 
 const Categories = () => {
@@ -30,8 +31,9 @@ const Categories = () => {
       setShowModal(false);
       fetchCategories();
       setFormData({ name: '', type: 'EXPENSE' });
-    } catch {
-      alert('Error creating category');
+      toast.success('Category created successfully');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error creating category');
     }
   };
 
