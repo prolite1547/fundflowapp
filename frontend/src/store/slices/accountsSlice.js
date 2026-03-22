@@ -1,13 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:8080/api/accounts';
+import { accountService } from '../../services/api';
 
 export const fetchAccounts = createAsyncThunk('accounts/fetchAccounts', async () => {
-  const token = localStorage.getItem('token');
-  const response = await axios.get(API_URL, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const response = await accountService.getAccounts();
   return response.data;
 });
 
@@ -19,15 +14,34 @@ const accountsSlice = createSlice({
     error: null
   },
   reducers: {
-    updateBalance: (state, action) => {
-      const { id, amount, type } = action.payload;
-      const account = state.items.find(acc => acc.id === id);
-      if (account) {
-        if (type === 'INCOME') {
-          account.balance += amount;
-        } else if (type === 'EXPENSE' || type === 'INVESTMENT') {
-          account.balance -= amount;
+    applyTransactionBalance: (state, action) => {
+      const {
+        accountId,
+        destinationAccountId,
+        amount,
+        type
+      } = action.payload;
+      const sourceAccount = state.items.find((acc) => String(acc.id) === String(accountId));
+      const destinationAccount = state.items.find((acc) => String(acc.id) === String(destinationAccountId));
+
+      if (type === 'TRANSFER') {
+        if (sourceAccount) {
+          sourceAccount.balance -= amount;
         }
+        if (destinationAccount) {
+          destinationAccount.balance += amount;
+        }
+        return;
+      }
+
+      if (!sourceAccount) {
+        return;
+      }
+
+      if (type === 'INCOME') {
+        sourceAccount.balance += amount;
+      } else if (type === 'EXPENSE' || type === 'INVESTMENT') {
+        sourceAccount.balance -= amount;
       }
     }
   },
@@ -47,5 +61,5 @@ const accountsSlice = createSlice({
   }
 });
 
-export const { updateBalance } = accountsSlice.actions;
+export const { applyTransactionBalance } = accountsSlice.actions;
 export default accountsSlice.reducer;

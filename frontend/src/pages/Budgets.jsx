@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { budgetService, categoryService } from '../services/api';
 import { Plus, Target, AlertTriangle, CheckCircle } from 'lucide-react';
 
@@ -16,11 +16,7 @@ const Budgets = () => {
     monthYear: new Date().toISOString().substring(0, 7)
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [filterMonthYear]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [year, month] = filterMonthYear.split('-');
       const [budRes, catRes] = await Promise.all([
@@ -34,7 +30,11 @@ const Budgets = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterMonthYear]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,7 +53,7 @@ const Budgets = () => {
         categoryId: '',
         monthYear: new Date().toISOString().substring(0, 7)
       });
-    } catch (err) {
+    } catch {
       alert('Error creating budget');
     }
   };

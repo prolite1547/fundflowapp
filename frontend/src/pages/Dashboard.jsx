@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { reportService } from '../services/api';
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -13,11 +13,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [breakdownType, setBreakdownType] = useState('EXPENSE');
 
-  useEffect(() => {
-    fetchData();
-  }, [breakdownType]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const now = new Date();
       const year = now.getFullYear();
@@ -37,7 +33,11 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [breakdownType]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const COLORS = ['#6366f1', '#ec4899', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
 
