@@ -10,6 +10,9 @@ import com.iamicdev.fundflowapp.model.Role;
 import com.iamicdev.fundflowapp.dto.request.RegisterRequest;
 import com.iamicdev.fundflowapp.dto.request.LoginRequest;
 import com.iamicdev.fundflowapp.dto.response.AuthResponse;
+import com.iamicdev.fundflowapp.exception.BadRequestException;
+import com.iamicdev.fundflowapp.exception.ConflictException;
+import com.iamicdev.fundflowapp.exception.UnauthorizedException;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,10 +40,10 @@ public class AuthenticationService {
     // re-check password validation service level
     private void validatePassword(String password){
         if(password == null || password.isEmpty()){
-            throw new IllegalArgumentException("Password is required");
+            throw new BadRequestException("Password is required");
         }
         if(!password.matches("(?=.*[0-9])(?=.*[A-Z])(?=.*[a-z])(?=.*[@$!%*?&]).{8,}$")){
-            throw new IllegalArgumentException("Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character");
+            throw new BadRequestException("Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character");
         }
     }
 
@@ -49,7 +52,7 @@ public class AuthenticationService {
     // ========================
     public AuthResponse register(RegisterRequest request){
         if(userRepository.findByEmail(request.getEmail()).isPresent()){
-            throw new IllegalArgumentException("Email already exists");
+            throw new ConflictException("Email already exists");
         }
         validatePassword(request.getPassword());
         
@@ -93,10 +96,10 @@ public class AuthenticationService {
     @Transactional
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Invalid email or password."));
+                .orElseThrow(() -> new UnauthorizedException("Invalid email or password."));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid email or password.");
+            throw new UnauthorizedException("Invalid email or password.");
         }
 
         // Remove previous refresh tokens (logout from all devices)
@@ -125,12 +128,13 @@ public class AuthenticationService {
     // -------------------------------
     //  REFRESH TOKEN
     // -------------------------------
-    public AuthResponse refreshAccessToken(String refreshToken) {
-        RefreshToken token = refreshTokenRepository.findByToken(refreshToken)
-                .orElseThrow(() -> new RuntimeException("Invalid refresh token."));
+    public AuthResponse refreshAccessToken(String refreshToken) { 
+        RefreshToken token = refreshTokenRepository.findByToken(refreshToken) 
+                .orElseThrow(() -> new UnauthorizedException("Invalid refresh token."));
 
         if (token.getExpiryDate().isBefore(Instant.now())) {
-            throw new RuntimeException("Refresh token expired.");
+            refreshTokenRepository.delete(token); 
+            throw new UnauthorizedException("Refresh token expired.");
         }
 
         User user = token.getUser();
@@ -139,7 +143,7 @@ public class AuthenticationService {
 
         return AuthResponse.builder()
                 .accessToken(newAccessToken)
-                .refreshToken(refreshToken) // or replace for rotation
+                .refreshToken(refreshToken) 
                 .tokenType("Bearer")
                 .userId(user.getId().toString())
                 .fullName(user.getFullName())
@@ -153,7 +157,7 @@ public class AuthenticationService {
     public User getAuthenticatedUser(){
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if(authentication == null || !authentication.isAuthenticated()){
-            throw new RuntimeException("User not authenticated");
+            throw new UnauthorizedException("User not authenticated");
         }
         return (User) authentication.getPrincipal();
     }

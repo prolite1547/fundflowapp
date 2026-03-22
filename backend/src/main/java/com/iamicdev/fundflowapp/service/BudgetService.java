@@ -15,6 +15,7 @@ import com.iamicdev.fundflowapp.dto.request.CreateBudgetRequest;
 import com.iamicdev.fundflowapp.dto.response.BudgetResponse;
 import com.iamicdev.fundflowapp.model.Budget;
 import com.iamicdev.fundflowapp.model.Transaction;
+import com.iamicdev.fundflowapp.exception.ConflictException;
 
 
 
@@ -35,7 +36,7 @@ public class BudgetService {
         var existingBudget = budgetRepository.findByUserIdAndCategoryIdAndMonthAndYear(userId, request.getCategoryId(), request.getMonth(), request.getYear());
 
         if(existingBudget.isPresent()) {
-            throw new RuntimeException("Budget already exists for this category in this month and year");
+            throw new ConflictException("Budget already exists for this category in this month and year");
         }
 
         var budget = new Budget();
