@@ -58,19 +58,33 @@ class BudgetServiceSpec extends Specification {
         result.remainingAmount == 5000.0
     }
 
-    def "createBudget - throws when budget already exists for same month and year"() {
+    def "createBudget - updates existing budget limit when budget already exists for same month and year"() {
         given:
         authenticationService.getAuthenticatedUser() >> mockUser
         def existing = new Budget()
+        existing.setId(UUID.randomUUID())
+        existing.setUserId(userId)
+        existing.setCategoryId(categoryId)
+        existing.setLimitAmount(500.0)
+        existing.setMonth(3)
+        existing.setYear(2026)
+        
         budgetRepository.findByUserIdAndCategoryIdAndMonthAndYear(userId, categoryId, 3, 2026) >> Optional.of(existing)
+        transactionService.findByUserId(userId) >> []
+        categoryRepository.findById(categoryId) >> Optional.empty()
 
         def request = new CreateBudgetRequest(categoryId: categoryId, limitAmount: 1000.0, month: 3, year: 2026)
 
         when:
-        budgetService.createBudget(request)
+        def result = budgetService.createBudget(request)
 
         then:
-        thrown(RuntimeException)
+        1 * budgetRepository.save(_) >> { Budget b -> b }
+        result.limitAmount == 1000.0
+        result.month == 3
+        result.year == 2026
+        result.spentAmount == 0.0
+        result.remainingAmount == 1000.0
     }
 
     def "createBudget - associates budget with authenticated user"() {

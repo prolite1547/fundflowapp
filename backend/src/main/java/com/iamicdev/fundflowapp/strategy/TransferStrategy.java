@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import com.iamicdev.fundflowapp.model.Account;
 import com.iamicdev.fundflowapp.strategy.base.TransactionContext;
 import com.iamicdev.fundflowapp.strategy.base.TransactionStrategy;
+import com.iamicdev.fundflowapp.exception.BadRequestException;
 
 @Service("TRANSFER")
 public class TransferStrategy implements TransactionStrategy {
@@ -15,10 +16,10 @@ public class TransferStrategy implements TransactionStrategy {
         double amount = context.getAmount();
 
         if (destinationAccount == null) {
-            throw new IllegalStateException("Destination account required for TRANSFER");
+            throw new BadRequestException("Destination account required for TRANSFER");
         }
         if (sourceAccount == null) {
-            throw new IllegalStateException("Source account required for TRANSFER");
+            throw new BadRequestException("Source account required for TRANSFER");
         }
 
         sourceAccount.setBalance(sourceAccount.getBalance() - amount);

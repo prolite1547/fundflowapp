@@ -4,14 +4,22 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, Legend, AreaChart, Area
 } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Wallet, Coins } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Wallet, Coins, Smile, Meh, Frown, AlertTriangle, AlertCircle } from 'lucide-react';
+import { useDispatch, useSelector } from "react-redux";
+import { fetchAccounts } from "../store/slices/accountsSlice";
+import { fetchTransactions } from "../store/slices/transactionsSlice";
 
 const Dashboard = () => {
   const [summary, setSummary] = useState(null);
   const [trend, setTrend] = useState([]);
   const [breakdown, setBreakdown] = useState([]);
+  const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [breakdownType, setBreakdownType] = useState('EXPENSE');
+
+  const dispatch = useDispatch();
+  const { items: accounts } = useSelector((state) => state.accounts);
+  const { items: transactions } = useSelector((state) => state.transactions);
 
   const fetchData = useCallback(async () => {
     try {
@@ -19,15 +27,17 @@ const Dashboard = () => {
       const year = now.getFullYear();
       const month = now.getMonth() + 1;
       
-      const [sumRes, trendRes, breakdownRes] = await Promise.all([
+      const [sumRes, trendRes, breakdownRes, healthRes] = await Promise.all([
         reportService.getSummary('monthly', { year, month }),
         reportService.getTrend('monthly', { year, month }),
-        reportService.getBreakdown('monthly', { year, month, type: breakdownType })
+        reportService.getBreakdown('monthly', { year, month, type: breakdownType }),
+        reportService.getFinancialHealth(year, month)
       ]);
 
       setSummary(sumRes.data);
       setTrend(trendRes.data);
       setBreakdown(breakdownRes.data);
+      setHealth(healthRes.data);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -37,9 +47,71 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    dispatch(fetchAccounts());
+    dispatch(fetchTransactions());
+  }, [fetchData, dispatch]);
 
   const COLORS = ['#6366f1', '#ec4899', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
+
+  const getHealthEmoji = (status) => {
+    switch (status) {
+      case 'Excellent': return <Smile color="#10b981" size={48} strokeWidth={1.5} />;
+      case 'Good': return <Smile color="#3b82f6" size={48} strokeWidth={1.5} />;
+      case 'Needs Attention': return <Meh color="#f59e0b" size={48} strokeWidth={1.5} />;
+      case 'Critical': return <Frown color="#ef4444" size={48} strokeWidth={1.5} />;
+      default: return <Meh color="#94a3b8" size={48} strokeWidth={1.5} />;
+    }
+  };
+
+  const getHealthCardStyles = (status) => {
+    const baseStyle = { 
+      marginBottom: '1.5rem', 
+      display: 'flex', 
+      flexWrap: 'wrap', 
+      justifyContent: 'space-between', 
+      alignItems: 'center', 
+      padding: '1.5rem 2rem',
+      transition: 'all 0.3s ease'
+    };
+
+    switch (status) {
+      case 'Excellent':
+        return {
+          ...baseStyle,
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 78, 59, 0.4))',
+          borderLeft: '4px solid #10b981',
+          boxShadow: '0 0 15px rgba(16, 185, 129, 0.1)'
+        };
+      case 'Good':
+        return {
+          ...baseStyle,
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 58, 138, 0.4))',
+          borderLeft: '4px solid #3b82f6'
+        };
+      case 'Needs Attention':
+        return {
+          ...baseStyle,
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(120, 53, 15, 0.4))',
+          borderLeft: '4px solid #f59e0b',
+          border: '1px solid rgba(245, 158, 11, 0.4)',
+          boxShadow: '0 0 20px rgba(245, 158, 11, 0.25)'
+        };
+      case 'Critical':
+        return {
+          ...baseStyle,
+          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(127, 29, 29, 0.5))',
+          borderLeft: '6px solid #ef4444',
+          border: '1px solid rgba(239, 68, 68, 0.6)',
+          boxShadow: '0 0 25px rgba(239, 68, 68, 0.4)'
+        };
+      default:
+        return {
+          ...baseStyle,
+          background: 'linear-gradient(135deg, rgba(30,40,60,0.8), rgba(20,20,30,0.9))',
+          borderLeft: '4px solid #8b5cf6'
+        };
+    }
+  };
 
   if (loading) return <div className="loading">Loading Dashboard...</div>;
 
@@ -51,6 +123,32 @@ const Dashboard = () => {
           <p className="text-muted">Monthly status for {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
         </div>
       </header>
+
+      {/* Financial Health Top Card */}
+      {health && accounts.length > 0 && transactions.length > 0 && (
+        <div className="health-card glass card" style={getHealthCardStyles(health.status)}>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              {health.status === 'Critical' && <AlertCircle color="#ef4444" size={24} />}
+              {health.status === 'Needs Attention' && <AlertTriangle color="#f59e0b" size={24} />}
+              Financial Health
+            </h2>
+            <p className="text-muted" style={{ margin: '0.4rem 0 0 0', fontSize: '1rem' }}>
+              Status: <strong style={{ color: '#fff' }}>{health.status}</strong>
+            </p>
+            {health.message && (
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#cbd5e1', lineHeight: '1.4', maxWidth: '85%' }}>
+                {health.message}
+              </p>
+            )}
+          </div>
+          <div style={{ fontSize: '2.5rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {getHealthEmoji(health.status)}
+            <span style={{ color: '#fff' }}>{health.score}</span>
+            <span style={{ fontSize: '1rem', color: '#94a3b8', alignSelf: 'flex-end', paddingBottom: '0.5rem' }}>/ 100</span>
+          </div>
+        </div>
+      )}
 
       {/* Metric Cards */}
       <div className="metric-grid">

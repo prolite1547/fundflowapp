@@ -32,18 +32,20 @@ public class BudgetService {
         var user = authenticationService.getAuthenticatedUser();
         UUID userId = user.getId();
 
-        var existingBudget = budgetRepository.findByUserIdAndCategoryIdAndMonthAndYear(userId, request.getCategoryId(), request.getMonth(), request.getYear());
+        var existingBudgetOpt = budgetRepository.findByUserIdAndCategoryIdAndMonthAndYear(userId, request.getCategoryId(), request.getMonth(), request.getYear());
 
-        if(existingBudget.isPresent()) {
-            throw new RuntimeException("Budget already exists for this category in this month and year");
+        Budget budget;
+        if(existingBudgetOpt.isPresent()) {
+            budget = existingBudgetOpt.get();
+            budget.setLimitAmount(request.getLimitAmount());
+        } else {
+            budget = new Budget();
+            budget.setUserId(userId);
+            budget.setCategoryId(request.getCategoryId());
+            budget.setMonth(request.getMonth());
+            budget.setYear(request.getYear());
+            budget.setLimitAmount(request.getLimitAmount());
         }
-
-        var budget = new Budget();
-        budget.setUserId(userId);
-        budget.setCategoryId(request.getCategoryId());
-        budget.setLimitAmount(request.getLimitAmount());
-        budget.setMonth(request.getMonth());
-        budget.setYear(request.getYear());
 
         budget = budgetRepository.save(budget);
 

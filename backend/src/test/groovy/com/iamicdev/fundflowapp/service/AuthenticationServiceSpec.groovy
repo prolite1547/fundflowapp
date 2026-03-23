@@ -8,6 +8,9 @@ import com.iamicdev.fundflowapp.model.Role
 import com.iamicdev.fundflowapp.model.User
 import com.iamicdev.fundflowapp.repository.RefreshTokenRepository
 import com.iamicdev.fundflowapp.repository.UserRepository
+import com.iamicdev.fundflowapp.exception.BadRequestException
+import com.iamicdev.fundflowapp.exception.ConflictException
+import com.iamicdev.fundflowapp.exception.UnauthorizedException
 import groovy.transform.CompileDynamic
 import org.springframework.security.crypto.password.PasswordEncoder
 import spock.lang.Specification
@@ -64,11 +67,11 @@ class AuthenticationServiceSpec extends Specification {
         authService.register(request)
 
         then:
-        thrown(IllegalArgumentException)
+        thrown(ConflictException)
     }
 
     @Unroll
-    def "register - throws IllegalArgumentException for invalid password: '#password'"() {
+    def "register - throws BadRequestException for invalid password: '#password'"() {
         given:
         def request = new RegisterRequest("John Doe", "john@example.com", password)
         userRepository.findByEmail("john@example.com") >> Optional.empty()
@@ -77,7 +80,7 @@ class AuthenticationServiceSpec extends Specification {
         authService.register(request)
 
         then:
-        thrown(IllegalArgumentException)
+        thrown(BadRequestException)
 
         where:
         password        | _
@@ -135,7 +138,7 @@ class AuthenticationServiceSpec extends Specification {
         result.userId == user.id.toString()
     }
 
-    def "login - throws RuntimeException when user not found"() {
+    def "login - throws UnauthorizedException when user not found"() {
         given:
         def request = new LoginRequest("unknown@example.com", "Secret@123")
         userRepository.findByEmail("unknown@example.com") >> Optional.empty()
@@ -144,10 +147,10 @@ class AuthenticationServiceSpec extends Specification {
         authService.login(request)
 
         then:
-        thrown(RuntimeException)
+        thrown(UnauthorizedException)
     }
 
-    def "login - throws RuntimeException when password does not match"() {
+    def "login - throws UnauthorizedException when password does not match"() {
         given:
         def user = new User()
         user.setPassword("hashed_password")
@@ -160,7 +163,7 @@ class AuthenticationServiceSpec extends Specification {
         authService.login(request)
 
         then:
-        thrown(RuntimeException)
+        thrown(UnauthorizedException)
     }
 
     def "login - deletes previous refresh tokens before issuing new one"() {
@@ -221,7 +224,7 @@ class AuthenticationServiceSpec extends Specification {
         authService.refreshAccessToken("bad-token")
 
         then:
-        thrown(RuntimeException)
+        thrown(UnauthorizedException)
     }
 
     def "refreshAccessToken - throws when token is expired"() {
@@ -238,6 +241,6 @@ class AuthenticationServiceSpec extends Specification {
         authService.refreshAccessToken("expired-token")
 
         then:
-        thrown(RuntimeException)
+        thrown(UnauthorizedException)
     }
 }

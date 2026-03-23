@@ -13,6 +13,7 @@ import com.iamicdev.fundflowapp.dto.response.AccountBalanceResponse;
 import com.iamicdev.fundflowapp.dto.response.CategoryBreakdownResponse;
 import com.iamicdev.fundflowapp.dto.response.DailyTrendResponse;
 import com.iamicdev.fundflowapp.dto.response.SummaryResponse;
+import com.iamicdev.fundflowapp.dto.response.FinancialHealthResponse;
 import com.iamicdev.fundflowapp.model.TransactionType;
 import com.iamicdev.fundflowapp.service.ReportService;
 
@@ -109,5 +110,10 @@ public class ReportController {
     @GetMapping("/trend/range")
     public ResponseEntity<List<DailyTrendResponse>> trendRange(@RequestParam LocalDate startDate, @RequestParam LocalDate endDate) {
         return ResponseEntity.ok(reportService.getTrendRange(startDate, endDate));
+    }
+
+    @GetMapping("/financial-health")
+    public ResponseEntity<FinancialHealthResponse> getFinancialHealth(@RequestParam int year, @RequestParam int month) {
+        return ResponseEntity.ok(reportService.getFinancialHealth(year, month));
     }
 }

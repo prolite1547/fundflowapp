@@ -133,6 +133,7 @@ export const reportService = {
   getSummary: (period, params) => api.get(`/reports/summary/${period}`, { params }),
   getBreakdown: (period, params) => api.get(`/reports/breakdown/${period}`, { params }),
   getTrend: (period, params) => api.get(`/reports/trend/${period}`, { params }),
+  getFinancialHealth: (year, month) => api.get('/reports/financial-health', { params: { year, month } }),
 };
 
 export default api;
